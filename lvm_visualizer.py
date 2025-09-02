@@ -809,21 +809,11 @@ if __name__ == "__main__":
 
     if len(args) > 0:
         arg = args[0]
-        if arg == "--live":
-            # Live analysis mode (explicit)
-            print("🔍 Live system analysis mode")
-            run_live_analysis(html_mode)
-        elif arg == "--help":
-                  # Help
-                  print("Usage:")
-                  print("  python3 lvm_visualizer.py                    # Live analysis (default)")
-                  print("  python3 lvm_visualizer.py --live             # Live analysis (explicit)")
-                  print("  python3 lvm_visualizer.py --html             # Live analysis with HTML output")
-                  print("  python3 lvm_visualizer.py <file.txt>         # Analyze from file")
-                  print("  python3 lvm_visualizer.py <file.txt> --html  # Analyze from file with HTML output")
-                  print("  python3 lvm_visualizer.py --help             # Show this help")
-                  print("\nFile format: Output of 'sudo pvdisplay -m --units M'")
-                  print("Dependencies: pip3 install matplotlib numpy")
+        if arg == "--help":
+            # Help
+            print("Usage:")
+            print("  python3 lvm_visualizer.py [--help] [--html] [file.txt]")
+            print("\nFile format: Output of 'sudo pvdisplay -m --units M'")
         else:
             # File analysis mode
             print(f"📄 File analysis mode: {arg}")
