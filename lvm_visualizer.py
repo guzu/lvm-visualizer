@@ -23,68 +23,8 @@ class LVMAnalyzer:
             '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
         ]
 
-    def parse_pvdisplay_output(self, output):
-        """Parse pvdisplay -m --units M output"""
-        pvs = {}
-        current_pv = None
-
-        lines = output.strip().split('\n')
-        for line in lines:
-            line = line.strip()
-
-            if line.startswith('PV Name'):
-                current_pv = line.split()[2]
-                pvs[current_pv] = {
-                    'vg': '',
-                    'size': 0,
-                    'free_pe': 0,
-                    'total_pe': 0,
-                    'segments': []
-                }
-            elif line.startswith('VG Name') and current_pv:
-                pvs[current_pv]['vg'] = line.split()[2]
-            elif line.startswith('PV Size') and current_pv:
-                size_match = re.search(r'(\d+\.?\d*)', line)
-                if size_match:
-                    pvs[current_pv]['size'] = float(size_match.group(1))
-            elif line.startswith('Free PE') and current_pv:
-                pvs[current_pv]['free_pe'] = int(line.split()[2])
-            elif line.startswith('Total PE') and current_pv:
-                pvs[current_pv]['total_pe'] = int(line.split()[2])
-            elif 'Physical extent' in line and current_pv:
-                # Parse physical segments
-                if 'FREE' in line:
-                    # Free segment
-                    extent_match = re.search(r'Physical extent (\d+) to (\d+)', line)
-                    if extent_match:
-                        start, end = int(extent_match.group(1)), int(extent_match.group(2))
-                        pvs[current_pv]['segments'].append({
-                            'start': start,
-                            'end': end,
-                            'lv': 'FREE',
-                            'size': (end - start + 1) * 4.19  # PE Size in MB
-                        })
-                else:
-                    # Allocated segment
-                    extent_match = re.search(r'Physical extent (\d+) to (\d+)', line)
-                    if extent_match:
-                        start, end = int(extent_match.group(1)), int(extent_match.group(2))
-                        # Next line contains the LV
-                        continue
-            elif line.startswith('Logical volume') and current_pv:
-                # Get LV name for the previous segment
-                lv_name = line.split()[2].split('/')[-1]
-                if pvs[current_pv]['segments']:
-                    # Find the last added segment and update the LV
-                    for segment in reversed(pvs[current_pv]['segments']):
-                        if 'lv' not in segment or segment['lv'] == '':
-                            segment['lv'] = lv_name
-                            break
-
-        return pvs
-
-    def parse_pvdisplay_from_data(self, pvdisplay_content):
-        """Parse pvdisplay data provided directly"""
+    def parse_pvdisplay(self, pvdisplay_content):
+        """Parse pvdisplay -m --units M output (from file or command)"""
         pvs = {}
         current_pv = None
         in_segments = False
@@ -101,7 +41,7 @@ class LVMAnalyzer:
                     'size': 0,
                     'free_pe': 0,
                     'total_pe': 0,
-                    'pe_size': 4.19,
+                    'pe_size': 4.19,  # Default PE size, will be updated if found
                     'segments': []
                 }
                 in_segments = False
@@ -730,7 +670,7 @@ def analyze_from_file(file_path, html_mode=False):
             pvdisplay_output = f.read()
 
         # Parse data
-        pvs = analyzer.parse_pvdisplay_from_data(pvdisplay_output)
+        pvs = analyzer.parse_pvdisplay(pvdisplay_output)
 
         # Display summary
         analyzer.print_summary(pvs)
@@ -772,7 +712,7 @@ def run_live_analysis(html_mode=False):
                                 capture_output=True, text=True, check=True)
 
         analyzer = LVMAnalyzer()
-        pvs = analyzer.parse_pvdisplay_output(result.stdout)
+        pvs = analyzer.parse_pvdisplay(result.stdout)
 
         # Display summary and create visualization
         analyzer.print_summary(pvs)
